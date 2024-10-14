@@ -26,7 +26,6 @@ import Base: getindex, length, setindex!, +, -, *
 import ITensors: AbstractMPS, ⊕
 
 include("ITensors.jl")
-include("ITensorNetworks.jl")
 include("itensormap.jl")
 include("celledvectors.jl")
 include("abstractinfinitemps.jl")
@@ -60,7 +59,6 @@ export Cell,
   InfiniteBlockMPO,
   InfiniteSumLocalOps,
   ITensorMap,
-  ITensorNetwork,
   TransferMatrix,
   @Model_str,
   Model,

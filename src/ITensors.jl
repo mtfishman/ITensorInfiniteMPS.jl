@@ -1,13 +1,7 @@
 using ITensorMPS: MPS
 using ITensors.NDTensors: NDTensors, tensor
-using ITensors: ITensors, IndexSet, QN, Tag, TagSet, dag, inds, isdiag, sim
+using ITensors: ITensors, QN, Tag, TagSet, dag, inds, isdiag, sim
 using LinearAlgebra: LinearAlgebra, eigen
-
-############################################################################
-# imports.jl
-#
-
-import Base: *
 
 ############################################################################
 # NDTensors
@@ -36,21 +30,13 @@ end
 #
 
 # Used for findfirst
-Base.keys(ts::TagSet) = Base.OneTo(length(ts))
+Base.keys(ts::TagSet) = Base.OneTo(length(ts)) # added
 
 import ITensors: Tag, commontags
 
-macro tag_str(s)
-  return Tag(s)
-end
+maxlength(tag::Tag) = length(tag.data) # added
 
-commontags(ts::TagSet, i::Index) = commontags(ts, tags(i))
-
-commontags(t::Vector) = foldl(commontags, t)
-
-maxlength(tag::Tag) = length(tag.data)
-
-function Base.length(tag::Tag)
+function Base.length(tag::Tag) # added
   n = 1
   while n <= maxlength(tag) && tag[n] != zero(eltype(tag))
     n += 1
@@ -58,17 +44,17 @@ function Base.length(tag::Tag)
   return n - 1
 end
 
-Base.lastindex(tag::Tag) = length(tag)
+Base.lastindex(tag::Tag) = length(tag) # added
 
-Base.getindex(tag::Tag, r::UnitRange) = Tag([tag[n] for n in r])
+Base.getindex(tag::Tag, r::UnitRange) = Tag([tag[n] for n in r]) #added
 
 # TODO: make this work directly on a Tag, without converting
 # to String
-function Base.parse(::Type{T}, tag::Tag) where {T<:Integer}
+function Base.parse(::Type{T}, tag::Tag) where {T<:Integer} #added
   return parse(T, string(tag))
 end
 
-function Base.startswith(tag::Tag, subtag::Tag)
+function Base.startswith(tag::Tag, subtag::Tag) #added
   for n in 1:length(subtag)
     tag[n] ≠ subtag[n] && return false
   end
@@ -121,34 +107,8 @@ end
 ⊕(qns::Vector{Pair{QN,Int}}, qn::Pair{QN,Int}) = push!(copy(qns), qn)
 
 ############################################################################
-# indexset.jl
-#
-
-ITensors.IndexSet(is::IndexSet...) = unioninds(is)
-ITensors.IndexSet(is::Tuple{Vararg{IndexSet}}) = unioninds(is...)
-
-Base.copy(is::IndexSet) = IndexSet(copy.(ITensors.data(is)))
-
-ITensors.noncommoninds(is::IndexSet) = is
-
-############################################################################
 # itensor.jl
 #
-
-# Helpful for making sure the ITensor doesn't contract
-ITensors.sim(A::ITensor) = ITensors.setinds(A, sim(inds(A)))
-
-LinearAlgebra.isdiag(T::ITensor) = isdiag(tensor(T))
-
-function eigendecomp(T::ITensor; ishermitian=true, kwargs...)
-  @assert ishermitian
-  D, U = eigen(T; ishermitian=ishermitian, kwargs...)
-  return U', D, dag(U)
-end
-
-*(A::ITensor) = A
-
-ITensors.noncommoninds(A::ITensor) = inds(A)
 
 # TODO: implement something like this?
 #function sqrt(::Order{2}, T::ITensor)
@@ -161,7 +121,8 @@ function Base.sqrt(T::ITensor; ishermitian=true, atol=1e-15)
   if isdiag(T) && order(T) == 2
     return itensor(sqrt(tensor(T)))
   end
-  U′, D, Uᴴ = eigendecomp(T; ishermitian=ishermitian)
+  #U′, D, Uᴴ = eigendecomp(T; ishermitian=ishermitian)
+  D, U = eigen(T; ishermitian=ishermitian)
   # XXX: if T is order 2 and diagonal, D may just be a view
   # of T so this would also modify T
   #D .= sqrt.(D)
@@ -174,7 +135,7 @@ function Base.sqrt(T::ITensor; ishermitian=true, atol=1e-15)
       sqrtD[n, n] = sqrt(Dnn)
     end
   end
-  return U′ * sqrtD * Uᴴ
+  return U' * sqrtD * dag(U)
 end
 
 ############################################################################
@@ -183,14 +144,4 @@ end
 
 # TODO: make this definition AbstractMPS
 # Handle orthogonality center correctly
-Base.getindex(ψ::MPS, r::UnitRange{Int}) = MPS([ψ[n] for n in r])
-
-#TODO Remove if everything is working nicely
-#Was still crashing on my laptop after updating ITensors
-Base.fill!(::NDTensors.NoData, ::Any) = NDTensors.NoData()
-
-function ITensors.NDTensors.contraction_output(
-  A::NDTensors.EmptyTensor, B::NDTensors.DiagBlockSparseTensor, label
-)
-  return NDTensors.EmptyTensor(promote_type(eltype(A), eltype(B)), label)
-end
+Base.getindex(ψ::MPS, r::UnitRange{Int}) = MPS([ψ[n] for n in r]) # added
